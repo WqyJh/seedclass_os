@@ -1,4 +1,4 @@
-#include "common.h"
+#include "../thread/common.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -72,7 +72,7 @@ static uint64_t sol_process(uint32_t n, uint32_t m)
     }
 
     _start = 1;
-    for (int i = 0; i < n; ++i) {
+    for (uint32_t i = 0; i < n; ++i) {
         if (i == 0) {
             _start = 1;
             _n = m - n_per_thread * (n - 1);
@@ -93,7 +93,7 @@ static uint64_t sol_process(uint32_t n, uint32_t m)
         }
     }
 
-    for (int i = 0; i < n; ++i) {
+    for (uint32_t i = 0; i < n; ++i) {
         waitpid(processes[i], NULL, 0);
     }
 

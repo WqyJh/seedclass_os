@@ -54,7 +54,7 @@ static uint64_t sol_thread(uint32_t n, uint32_t m)
     }
 
     arg.data.start = 1;
-    for (int i = 0; i < n; ++i) {
+    for (uint32_t i = 0; i < n; ++i) {
         if (i == 0) {
             arg.data.start = 1;
             arg.data.n = m - n_per_thread * (n - 1);
@@ -66,7 +66,7 @@ static uint64_t sol_thread(uint32_t n, uint32_t m)
         pthread_create(&threads[i], NULL, child_worker, (void *) arg.data_un);
     }
 
-    for (int i = 0; i < n; ++i) {
+    for (uint32_t i = 0; i < n; ++i) {
         pthread_join(threads[i], NULL);
     }
 
