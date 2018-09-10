@@ -5,7 +5,7 @@
 #include <pthread.h>
 
 
-uint64_t sum = 0;
+static uint64_t s_sum = 0;
 
 
 typedef union
@@ -20,20 +20,7 @@ typedef union
 } arg_t;
 
 
-void *sol1_worker(void *args)
-{
-    arg_t a;
-    a.data_un = (uint64_t) args;
-
-    for (uint32_t i = 0; i < a.data.n; ++i) {
-        __sync_add_and_fetch(&sum, i + a.data.start);
-    }
-
-    return NULL;
-}
-
-
-void *sol2_worker(void *args)
+static void *child_worker(void *args)
 {
     arg_t a;
     a.data_un = (uint64_t) args;
@@ -44,15 +31,15 @@ void *sol2_worker(void *args)
         _sum += i + a.data.start;
     }
 
-    __sync_add_and_fetch(&sum, _sum);
+    __sync_add_and_fetch(&s_sum, _sum);
 
     return NULL;
 }
 
 
-void _sol(uint32_t n, uint32_t m, void *(*worker)(void *args))
+static uint64_t sol_thread(uint32_t n, uint32_t m)
 {
-    sum = 0;
+    s_sum = 0;
     arg_t arg;
     pthread_t *threads = NULL;
     uint32_t n_per_thread;
@@ -76,14 +63,12 @@ void _sol(uint32_t n, uint32_t m, void *(*worker)(void *args))
             arg.data.n = n_per_thread;
         }
 
-        pthread_create(&threads[i], NULL, worker, (void *) arg.data_un);
+        pthread_create(&threads[i], NULL, child_worker, (void *) arg.data_un);
     }
 
     for (int i = 0; i < n; ++i) {
         pthread_join(threads[i], NULL);
     }
-
-    printf("sum: %lu\n", sum);
 
 EXIT:
     if (threads) {
@@ -91,23 +76,11 @@ EXIT:
         threads = NULL;
     }
 
-    return;
+    return s_sum;
 }
-
-
-#define sol1(n, m) _sol(n, m, sol1_worker)
-
-#define sol2(n, m) _sol(n, m, sol2_worker)
 
 
 int main()
 {
-    uint32_t n = 100;
-    uint32_t m = 0xFFFFFFFF;
-
-    CLOCK(sol2(n, m));
-
-//    CLOCK(sol1(n, m));
-
-    return 0;
+    return run_sol(sol_thread);
 }

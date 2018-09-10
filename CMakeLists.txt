@@ -4,7 +4,9 @@ project(seedclass_os)
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_FLAGS "-O3 -Werror -Wfatal-errors -Wall")
 
-add_executable(multisum_thread multisum_thread.c common.h)
+add_executable(multisum_thread multisum_thread.c common.h common.c)
 target_link_libraries(multisum_thread pthread)
 
-add_executable(multisum_process multisum_process.c common.h)
+add_executable(multisum_process multisum_process.c common.h common.c)
+
+configure_file(input.txt ${CMAKE_BINARY_DIR}/)

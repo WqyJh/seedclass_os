@@ -13,7 +13,7 @@
 
 key_t g_key = -1;
 int g_shmid = -1;
-uint64_t *g_shm_sum = NULL;
+static uint64_t *s_shm_sum = NULL;
 
 
 static int worker(uint32_t n, uint32_t start)
@@ -24,14 +24,15 @@ static int worker(uint32_t n, uint32_t start)
         _sum += i + start;
     }
 
-    __sync_add_and_fetch(g_shm_sum, _sum);
+    __sync_add_and_fetch(s_shm_sum, _sum);
 
     return 0;
 }
 
 
-void _sol(uint32_t n, uint32_t m)
+static uint64_t sol_process(uint32_t n, uint32_t m)
 {
+    uint64_t ret = 0;
     pid_t *processes = NULL;
     uint32_t n_per_thread;
     uint32_t _start = 0;
@@ -51,15 +52,15 @@ void _sol(uint32_t n, uint32_t m)
         goto EXIT;
     }
 
-    g_shm_sum = shmat(g_shmid, 0, 0);
+    s_shm_sum = shmat(g_shmid, 0, 0);
 
-    if ((void *) -1 == g_shm_sum) {
+    if ((void *) -1 == s_shm_sum) {
         perror("shmat() failed");
-        g_shm_sum = NULL;
+        s_shm_sum = NULL;
         goto EXIT;
     }
 
-    *g_shm_sum = 0;
+    *s_shm_sum = 0;
 
     n_per_thread = m / n;
 
@@ -96,7 +97,7 @@ void _sol(uint32_t n, uint32_t m)
         waitpid(processes[i], NULL, 0);
     }
 
-    printf("sum: %lu\n", *g_shm_sum);
+    ret = *s_shm_sum;
 
 EXIT:
     if (processes) {
@@ -104,9 +105,9 @@ EXIT:
         processes = NULL;
     }
 
-    if (g_shm_sum) {
-        shmdt(g_shm_sum);
-        g_shm_sum = NULL;
+    if (s_shm_sum) {
+        shmdt(s_shm_sum);
+        s_shm_sum = NULL;
     }
 
     if (g_shmid > 0) {
@@ -114,14 +115,12 @@ EXIT:
         g_shmid = -1;
     }
 
-    return;
+    return ret;
 }
 
 
 int main()
 {
-    uint32_t n = 100;
-    uint32_t m = 0xFFFFFFFF;
     int ret = EXIT_FAILURE;
 
     {
@@ -135,10 +134,11 @@ int main()
         close(fd);
     }
 
-    CLOCK(_sol(n, m));
-
-    ret = EXIT_SUCCESS;
+    ret = run_sol(sol_process);
 
 EXIT:
+    if (unlink(SHM_NAME) == -1) {
+        perror("unlink() failed");
+    }
     return ret;
 }
